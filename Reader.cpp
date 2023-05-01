@@ -16,6 +16,7 @@ Reader::Reader(const std::string& filename) : arquivo(filename), linhas(0), colu
 void Reader::read() {
 	std::ifstream file(arquivo);
 	std::string line;
+
 	if (file.is_open()) {
 		getline(file, line);
 		std::stringstream(line) >> linhas;
@@ -27,7 +28,8 @@ void Reader::read() {
 
 		mapa = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
 
-		bool posto1Encontrado = false; // flag para verificar se o posto 1 foi encontrado
+		start = std::make_pair(0, 0); // primeiro posto da sequência não obstruído
+		int firstTarget = 1; // primeiro alvo da sequência não obstruído
 
 		for (int i = 0; i < linhas; i++) {
 			getline(file, line);
@@ -36,14 +38,15 @@ void Reader::read() {
 				if (j < line.size()) {
 					row.push_back(line[j]);
 
-					if (!posto1Encontrado && line[j] == '1') {
-						start = std::make_pair(i, j);
-						std::cout << "Start: (" << i << ", " << j << ")" << std::endl;
-						posto1Encontrado = true;
-					}
-					else if (isdigit(line[j]) && line[j] != '0') {
-						int target;
-						std::stringstream(line.substr(j, 1)) >> target;
+					if (line[j] >= '1' && line[j] <= '9') {
+						int num;
+						std::stringstream(line.substr(j, 1)) >> num;
+
+						if (num == firstTarget) {
+							start = std::make_pair(i, j);
+							std::cout << "Coordenadas do primeiro posto da sequencia: (" << i << ", " << j << ")" << std::endl;
+							firstTarget++;
+						}
 						targets.push_back(std::make_pair(i, j));
 					}
 				}
@@ -51,7 +54,12 @@ void Reader::read() {
 			mapa[i] = row;
 		}
 
-		std::cout << "Fui lido com sucesso :)" << std::endl;
+		if (firstTarget == 1) {
+			std::cerr << "Nao foi encontrado nenhum posto da sequência 1-9." << std::endl;
+			return;
+		}
+
+		std::cout << "Fui lido com sucesso :)\n" << std::endl;
 		file.close();
 	}
 	else {
@@ -72,71 +80,55 @@ bool Reader::is_valid(int i, int j) {
 	return true;
 }
 
-// Erros: não está percorrendo por ordem
 int Reader::bfs() {
-
 	int targets_count = targets.size();
 	int current_target = 1;
 	int current_moves = 0;
-	int linha_movimento[] = { -1, 0, 1, 0 };
-	int coluna_movimento[] = { 0, 1, 0, -1 };
+
+	int linha_movimento[] = { -1, 0, 1, 0 }; // -1: cima, 0: fica, 1: baixo
+	int coluna_movimento[] = { 0, 1, 0, -1 }; // 1: direita, 0: fica, -1: direita
 
 	std::vector<std::vector<bool>> percorrido(linhas, std::vector<bool>(colunas, false));
 	std::queue<std::pair<int, int>> fila;
-
 	fila.push(start);
 	percorrido[start.first][start.second] = true;
 
-	while (!fila.empty()) {
-		int tamanho_fila = fila.size(); // número de elementos na fila antes de entrar no loop
-		for (int i = 0; i < tamanho_fila; i++) {
-			std::pair<int, int> atual = fila.front();
+	while (current_target <= targets_count && current_moves <= 9) {
+		int size = fila.size();
+		for (int i = 0; i < size; i++) {
+			std::pair<int, int> vertex = fila.front();
 			fila.pop();
-
-			std::cout << "Estou no posto " << mapa[atual.first][atual.second] << std::endl;
-
-
-			//O condicional abaixo serve para calcular se o próximo elemento
-			//segue a ordem.
-			if (mapa[atual.first][atual.second] == current_target % 9 + 1 + '0') {
-				current_target++;
-				if (current_target == targets_count + 1) {
-					return current_moves;
-				}
-			}
+			int linha = vertex.first;
+			int coluna = vertex.second;
 
 			for (int j = 0; j < 4; j++) {
-				int nova_linha = atual.first + linha_movimento[j];
-				int nova_coluna = atual.second + coluna_movimento[j];
+				int nova_linha = linha + linha_movimento[j];
+				int nova_coluna = coluna + coluna_movimento[j];
 
 				if (is_valid(nova_linha, nova_coluna) && !percorrido[nova_linha][nova_coluna]) {
 					percorrido[nova_linha][nova_coluna] = true;
-					if (mapa[nova_linha][nova_coluna] != '*') {
+					fila.push(std::make_pair(nova_linha, nova_coluna));
+					if (std::find(targets.begin(), targets.end(), std::make_pair(nova_linha, nova_coluna)) != targets.end()) {
+						if (current_target == targets_count) {
+							return current_moves + 1;
+						}
+						current_target++;
+						current_moves += (nova_linha - linha) + (nova_coluna - coluna);
+						std::cout << "Valor lido: " << mapa[nova_linha][nova_coluna] << ", coordenadas: " << nova_linha << "," << nova_coluna << std::endl;
+						fila = std::queue<std::pair<int, int>>();
 						fila.push(std::make_pair(nova_linha, nova_coluna));
+						std::vector<std::vector<bool>> novo_percorrido(linhas, std::vector<bool>(colunas, false));
+						novo_percorrido[nova_linha][nova_coluna] = true;
+						percorrido = novo_percorrido;
+						break;
+					}
+					else {
+						fila.push(std::make_pair(nova_linha, nova_coluna));
+						percorrido[nova_linha][nova_coluna] = true;
 					}
 				}
 			}
 		}
-
-		current_moves++;
 	}
-}
-
-
-int Reader::distancia() {
-	std::pair<int, int> posicao_atual = start;
-	int distancia_total = 0;
-	int numero_atual = 1;
-	while (numero_atual <= targets.size()) {
-		std::pair<int, int> proximo_numero = targets[numero_atual - 1];
-		int distancia = bfs();
-		if (distancia == -1) {
-			return -1; // Não foi possível alcançar o próximo número, então a distância total não pode ser calculada
-		}
-		distancia_total += distancia;
-		posicao_atual = proximo_numero;
-		numero_atual++;
-	}
-	std::cout << "Soma total: " << distancia_total << std::endl;
-	return distancia_total;
+	return -1; // Indica que não foi possível encontrar uma solução
 }
