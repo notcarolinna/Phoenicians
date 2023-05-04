@@ -26,23 +26,28 @@ void Dados::Mapa() {
 		std::cerr << "Falha ao abrir o arquivo " << arquivo << std::endl;
 		return;
 	}
-	std::cout << "Estou na function Mapa" << std::endl;
+
+	std::cout << "\n\nTabela de resultados para o teste: " << std::endl;
+	std::cout << "Sem contar * como obstaculo e sem retornar para casa: 61" << std::endl;
+	std::cout << "* Como obstaculo e sem retornar para casa: 71" << std::endl;
+	std::cout << "Tudo certo como deveria: 78" << std::endl;
 
 	int total_distancia = 0;
-	int p[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-	int num_posto = 0;
-	int numero_atual = p[num_posto];
-
 	std::string line;
 	std::getline(file, line);
 	std::stringstream ss(line);
 	ss >> linhas >> colunas;
-	std::cout << "Linhas: " << linhas << "\nColunas: " << colunas << std::endl;
+	std::cout << "\n\nLinhas: " << linhas << "\nColunas: " << colunas << std::endl;
 
 	mapa = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
 	start = { 0, 0 };
 	int firstTarget = 1;
 	bool foundFirstTarget = false;
+
+	std::stack<int> pilha;
+	for (int i = 9; i >= 1; i--) {
+		pilha.push(i);
+	}
 
 	for (int i = 0; i < linhas; i++) {
 
@@ -51,7 +56,7 @@ void Dados::Mapa() {
 
 		for (int j = 0; j < colunas && j < line.size(); j++) {
 			col[j] = line[j];
-			std::cout << "Lendo caractere " << line[j] << " na coordenada (" << i << "," << j << ")" << std::endl;
+			//std::cout << "Lendo caractere " << line[j] << " na coordenada (" << i << "," << j << ")" << std::endl;
 
 			if (line[j] >= '1' && line[j] <= '9') { // Se o caractere for um número de 1 até 9
 				int num = line[j] - '0';
@@ -66,66 +71,46 @@ void Dados::Mapa() {
 
 		mapa[i] = col;
 	}
-}
 
-int Dados::Distancia() {
+	// Aqui eu começo a fazer a busca por profundidade ------------------------------------------------------------------------------
 
-	//Coisitas a serem feitas:
-	//Verificar se o primeiro posto está obstruído, caso esteja, começar a partir do próximo
-	//Fazer isso usando pilha, para que após chegar no último posto, retornar ao primeiro
+	std::cout << "\n" << std::endl;
 
-	int n = postos.size();
-	std::vector<bool> visitado(n, false);
-	std::stack<int> caderninho;
-	caderninho.push(0);
-	visitado[0] = true;
-	int atual = 0;
-	int distancia = 0;
+	while (!pilha.empty()) {
 
-	std::cout << "\n\nEstou na function Distancia" << std::endl;
+		int num = pilha.top();
+		pilha.pop();
 
-	while (!caderninho.empty()) { // enquanto houver postos no caderninho
-		int next = -1;
+		std::cout << "Buscando o posto " << num << "..." << std::endl;
 
-		for (int i = atual + 1; i < n; i++) {
-			if (!visitado[i] && mapa[postos[atual].first][postos[atual].second] == mapa[postos[i].first][postos[i].second]) {
-				// Verifica se o próximo ponto é um obstáculo
-				if (mapa[postos[i].first][postos[i].second] != '*') {
-					if (next == -1 || abs(postos[atual].first - postos[i].first) + abs(postos[atual].second - postos[i].second) < abs(postos[atual].first - postos[next].first) + abs(postos[atual].second - postos[next].second)) {
-						next = i;
-					}
+		for (auto& v : postos) {
+			if (mapa[v.first][v.second] == num + '0') { // posto encontrado
+				std::cout << "Encontrei posto " << num << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
+				total_distancia += abs(start.first - v.first) + abs(start.second - v.second);
+				start = v;
+
+				if (num == 9) { // último posto encontrado, encerrando busca
+					std::cout << "\nDistancia total percorrida: " << total_distancia << std::endl;
+					return;
 				}
+
+				foundFirstTarget = true;
+				firstTarget++;
+				break;
 			}
 		}
 
-		if (next == -1) {
-			if (atual == 0) {
-				return -1; // Não foi possível alcançar o primeiro posto
-			}
-			distancia -= abs(postos[atual].first - postos[atual - 1].first) + abs(postos[atual].second - postos[atual - 1].second);
-			atual--;
+		if (!foundFirstTarget) {
+			std::cerr << "Não foi possível encontrar o posto " << num << std::endl;
+			return;
 		}
-
-		else {
-			visitado[next] = true;
-			caderninho.push(next);
-			int dist_postos = abs(postos[atual].first - postos[next].first) + abs(postos[atual].second - postos[next].second);
-			distancia += dist_postos;
-			std::cout << "Distancia entre posto " << atual << " e posto " << next << ": " << dist_postos << std::endl;
-			atual = next;
-			if (caderninho.size() == n) {
-				return distancia; // Todos os postos foram visitados
-			}
-		}
+		foundFirstTarget = false;
 	}
-
-	return -1; // Caso não seja possível visitar todos os postos
 }
+
 
 int main() {
 	Dados Dados("teste.txt");
 	Dados.Mapa();
-	Dados.Distancia();
-
 	return 0;
 }
