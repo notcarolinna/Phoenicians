@@ -6,25 +6,32 @@
 #include <climits>
 #include <cmath>
 
-class Reader {
+class Dados {
 public:
 	std::string arquivo;
 	int linhas;
 	int colunas;
 
-	Reader(std::string arquivo) : arquivo(arquivo) {}
+	Dados(std::string arquivo) : arquivo(arquivo) {}
 	std::vector<std::vector<char>> mapa;
 	std::pair<int, int> start;
 	std::vector<std::pair<int, int>> postos;
-	void read();
+	void Mapa();
+	int Distancia();
 };
 
-void Reader::read() {
+void Dados::Mapa() {
 	std::ifstream file(arquivo);
 	if (!file.is_open()) {
 		std::cerr << "Falha ao abrir o arquivo " << arquivo << std::endl;
 		return;
 	}
+	std::cout << "Estou na function Mapa" << std::endl;
+
+	int total_distancia = 0;
+	int p[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+	int num_posto = 0;
+	int numero_atual = p[num_posto];
 
 	std::string line;
 	std::getline(file, line);
@@ -38,11 +45,15 @@ void Reader::read() {
 	bool foundFirstTarget = false;
 
 	for (int i = 0; i < linhas; i++) {
+
 		std::getline(file, line);
 		std::vector<char> col(colunas, ' ');
+
 		for (int j = 0; j < colunas && j < line.size(); j++) {
 			col[j] = line[j];
-			if (line[j] >= '1' && line[j] <= '9') {
+			std::cout << "Lendo caractere " << line[j] << " na coordenada (" << i << "," << j << ")" << std::endl;
+
+			if (line[j] >= '1' && line[j] <= '9') { // Se o caractere for um número de 1 até 9
 				int num = line[j] - '0';
 				if (num == firstTarget) {
 					start = { i, j };
@@ -52,40 +63,69 @@ void Reader::read() {
 				postos.emplace_back(i, j);
 			}
 		}
+
 		mapa[i] = col;
 	}
 }
 
+int Dados::Distancia() {
 
+	//Coisitas a serem feitas:
+	//Verificar se o primeiro posto está obstruído, caso esteja, começar a partir do próximo
+	//Fazer isso usando pilha, para que após chegar no último posto, retornar ao primeiro
 
-int main() {
-	Reader reader("teste.txt");
-	reader.read();
+	int n = postos.size();
+	std::vector<bool> visitado(n, false);
+	std::stack<int> caderninho;
+	caderninho.push(0);
+	visitado[0] = true;
+	int atual = 0;
+	int distancia = 0;
 
-	int total_distancia = 0;
-	int postos[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-	int num_posto = 0;
-	int numero_atual = postos[num_posto];
+	std::cout << "\n\nEstou na function Distancia" << std::endl;
 
-	while (num_posto < 10) {
-		bool encontrado = false;
+	while (!caderninho.empty()) { // enquanto houver postos no caderninho
+		int next = -1;
 
-		for (int i = 0; i < reader.linhas; i++) {
-			for (int j = 0; j < reader.colunas; j++) {
-				if (reader.mapa[i][j] == '0' + numero_atual) {
-					reader.postos.push_back(std::make_pair(i, j));
-					std::cout << "Posto " << numero_atual << " encontrado nas coordenadas (" << i << ", " << j << ")" << std::endl;
-					encontrado = true;
-					break;
+		for (int i = atual + 1; i < n; i++) {
+			if (!visitado[i] && mapa[postos[atual].first][postos[atual].second] == mapa[postos[i].first][postos[i].second]) {
+				// Verifica se o próximo ponto é um obstáculo
+				if (mapa[postos[i].first][postos[i].second] != '*') {
+					if (next == -1 || abs(postos[atual].first - postos[i].first) + abs(postos[atual].second - postos[i].second) < abs(postos[atual].first - postos[next].first) + abs(postos[atual].second - postos[next].second)) {
+						next = i;
+					}
 				}
 			}
 		}
 
-		if (encontrado) {
-			num_posto++;
-			numero_atual = postos[num_posto];
+		if (next == -1) {
+			if (atual == 0) {
+				return -1; // Não foi possível alcançar o primeiro posto
+			}
+			distancia -= abs(postos[atual].first - postos[atual - 1].first) + abs(postos[atual].second - postos[atual - 1].second);
+			atual--;
+		}
+
+		else {
+			visitado[next] = true;
+			caderninho.push(next);
+			int dist_postos = abs(postos[atual].first - postos[next].first) + abs(postos[atual].second - postos[next].second);
+			distancia += dist_postos;
+			std::cout << "Distancia entre posto " << atual << " e posto " << next << ": " << dist_postos << std::endl;
+			atual = next;
+			if (caderninho.size() == n) {
+				return distancia; // Todos os postos foram visitados
+			}
 		}
 	}
+
+	return -1; // Caso não seja possível visitar todos os postos
+}
+
+int main() {
+	Dados Dados("teste.txt");
+	Dados.Mapa();
+	Dados.Distancia();
 
 	return 0;
 }
