@@ -7,18 +7,38 @@
 #include <cmath>
 
 class Dados {
-public:
-	std::string arquivo;
+private:
 	int linhas;
 	int colunas;
+	int total_distancia;
+	std::string arquivo;
 
+	std::vector<std::vector<char>> mapa; // matriz do mapa
+	std::pair<int, int> partida;
+	std::stack<int> portos; // pilha com os postos
+	std::vector<std::pair<int, int>> postos; // coordenadas dos postos
+
+public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
-	std::vector<std::vector<char>> mapa;
-	std::pair<int, int> start;
-	std::vector<std::pair<int, int>> postos;
+	bool isValid(int linhas, int colunas);
 	void Mapa();
-	int Distancia();
+	void DFS();
 };
+
+bool Dados::isValid(int linhas, int colunas) {
+
+	// verifica se são águas navegáveis ou não (*)
+
+	for (int i = 0; i < linhas; i++) {
+		for (int j = 0; j < colunas; j++) {
+			if (mapa[i][j] == '*') {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 void Dados::Mapa() {
 	std::ifstream file(arquivo);
@@ -27,12 +47,7 @@ void Dados::Mapa() {
 		return;
 	}
 
-	std::cout << "\n\nTabela de resultados para o teste: " << std::endl;
-	std::cout << "Sem contar * como obstaculo e sem retornar para casa: 61" << std::endl;
-	std::cout << "* Como obstaculo e sem retornar para casa: 71" << std::endl;
-	std::cout << "Tudo certo como deveria: 78" << std::endl;
-
-	int total_distancia = 0;
+	total_distancia = 0;
 	std::string line;
 	std::getline(file, line);
 	std::stringstream ss(line);
@@ -40,77 +55,83 @@ void Dados::Mapa() {
 	std::cout << "\n\nLinhas: " << linhas << "\nColunas: " << colunas << std::endl;
 
 	mapa = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
-	start = { 0, 0 };
-	int firstTarget = 1;
-	bool foundFirstTarget = false;
+	partida = { 0, 0 };
 
-	std::stack<int> pilha;
+	int portoAtual = 1; // preciso alterar isso, pois o porto 1 não será necessariamente o primeiro
+
+	// recheando minha pilha com portos de 1 a 9
+
 	for (int i = 9; i >= 1; i--) {
-		pilha.push(i);
+		portos.push(i);
 	}
 
 	for (int i = 0; i < linhas; i++) {
 
-		std::getline(file, line);
+		std::getline(file, line); 
 		std::vector<char> col(colunas, ' ');
 
-		for (int j = 0; j < colunas && j < line.size(); j++) {
-			col[j] = line[j];
+		for (int j = 0; j < colunas && j < line.size(); j++) { // itera sobre as colunas
+
+			col[j] = line[j]; // o j lido da line[j] é atribuido ao elemento correspondente em col
+
 			//std::cout << "Lendo caractere " << line[j] << " na coordenada (" << i << "," << j << ")" << std::endl;
 
-			if (line[j] >= '1' && line[j] <= '9') { // Se o caractere for um número de 1 até 9
-				int num = line[j] - '0';
-				if (num == firstTarget) {
-					start = { i, j };
-					firstTarget++;
-					foundFirstTarget = true;
-				}
+			if (line[j] >= '1' && line[j] <= '9') { // verifica se o porto foi encontrado no mapa
+				partida = { i, j };
+				portoAtual++;
 				postos.emplace_back(i, j);
 			}
 		}
 
 		mapa[i] = col;
 	}
+}
 
-	// Aqui eu começo a fazer a busca por profundidade ------------------------------------------------------------------------------
+void Dados::DFS() {
+	std::cout << "\nEstou na DFS" << std::endl;
 
-	std::cout << "\n" << std::endl;
+	int portoAtual = 1; // preciso alterar isso, pois o porto 1 não será necessariamente o primeiro
 
-	while (!pilha.empty()) {
+	while (!portos.empty()) {
+		int num = portos.top();
+		portos.pop();
 
-		int num = pilha.top();
-		pilha.pop();
-
-		std::cout << "Buscando o posto " << num << "..." << std::endl;
+		// std::cout << "Buscando o posto " << num << "..." << std::endl;
 
 		for (auto& v : postos) {
+
 			if (mapa[v.first][v.second] == num + '0') { // posto encontrado
-				std::cout << "Encontrei posto " << num << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
-				total_distancia += abs(start.first - v.first) + abs(start.second - v.second);
-				start = v;
+				if (isValid(v.first, v.second)) { // verifica se o posto é válido
+					std::cout << "Encontrei posto " << num << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
+					total_distancia += abs(partida.first - v.first) + abs(partida.second - v.second);
+					partida = v;
 
-				if (num == 9) { // último posto encontrado, encerrando busca
-					std::cout << "\nDistancia total percorrida: " << total_distancia << std::endl;
-					return;
+
+					// Refazer essa nhaca depois
+					if (num == 9) { 
+						std::cout << "\nDistancia total percorrida: " << total_distancia << std::endl;
+						return;
+					}
+
+					portoAtual++;
+					break;
 				}
-
-				foundFirstTarget = true;
-				firstTarget++;
-				break;
 			}
 		}
-
-		if (!foundFirstTarget) {
-			std::cerr << "Não foi possível encontrar o posto " << num << std::endl;
-			return;
-		}
-		foundFirstTarget = false;
 	}
 }
 
 
 int main() {
+
+	std::cout << "\n\nTabela de resultados para o teste: " << std::endl;
+	std::cout << "Sem contar * como obstaculo e sem retornar para casa: 61" << std::endl;
+	std::cout << "* Como obstaculo e sem retornar para casa: 71" << std::endl;
+	std::cout << "Tudo certo como deveria: 78" << std::endl;
+
 	Dados Dados("teste.txt");
 	Dados.Mapa();
+	Dados.DFS();
+
 	return 0;
 }
