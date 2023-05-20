@@ -68,7 +68,7 @@ void Dados::Mapa() {
 }
 
 void Dados::DFS() {
-		
+
 	for (int i = 9; i >= 1; i--) {
 		pilha.push(i);
 	}
@@ -87,6 +87,7 @@ void Dados::DFS() {
 		for (auto& v : postos) {
 			if (mapa[v.first][v.second] == num + '0') { // posto encontrado
 				std::cout << "Encontrei posto " << num << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
+
 				total_distancia += abs(partida.first - v.first) + abs(partida.second - v.second);
 				partida = v;
 
