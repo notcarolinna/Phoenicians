@@ -3,20 +3,17 @@
 #include <sstream>
 #include <vector>
 #include <stack>
-#include <climits>
-#include <cmath>
+
 
 class Dados {
 private:
 	int linhas;
 	int colunas;
-	int total_distancia;
 	std::string arquivo;
 
-	std::vector<std::vector<char>> mapa; // Armazena o mapa
+	std::vector<std::vector<char>> grafo; // Armazena o grafo
 	std::vector<std::pair<int, int>> coordenadas; // Armazena as coordenadas dos portos
-	std::stack<int> portos; // pilha com os portos 
-	std::pair<int, int> partida;
+	std::pair<int, int> partida; // Coordenadas de partida
 
 public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
@@ -29,7 +26,7 @@ void Dados::Mapa() {
 	std::ifstream file("./resources/" + arquivo);
 
 	if (!file.is_open()) {
-		std::cerr << "Falha ao abrir o arquivo" << arquivo << std::endl;
+		std::cerr << "Falha ao abrir o arquivo " << arquivo << std::endl;
 		return;
 	}
 
@@ -40,9 +37,8 @@ void Dados::Mapa() {
 
 	std::cout << "\n\nLinhas: " << linhas << "\nColunas: " << colunas << std::endl;
 
-	// Armazena o mapa
-	mapa = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
-	partida = { 0, 0 }; // inicia 
+	grafo = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
+	partida = { 0, 0 };
 
 	int portoAtual = 1;
 
@@ -66,17 +62,19 @@ void Dados::Mapa() {
 			}
 		}
 
-		mapa[i] = col;
+		grafo[i] = col;
 	}
 }
 
 void Dados::DFS() {
 
+	std::stack<int> portos; // pilha com os portos 
 	for (int i = 9; i >= 1; i--) {
 		portos.push(i);
 	}
 
 	int portoAtual = 1;
+	int total_distancia = 0;
 
 	std::cout << "\n" << std::endl;
 
@@ -89,7 +87,7 @@ void Dados::DFS() {
 
 		for (auto& v : coordenadas) {
 
-			if (mapa[v.first][v.second] == num + '0') { // posto encontrado
+			if (grafo[v.first][v.second] == num + '0') { // posto encontrado
 				std::cout << "Encontrei posto " << num << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
 
 				total_distancia += abs(partida.first - v.first) + abs(partida.second - v.second);
@@ -115,7 +113,7 @@ int main() {
 	std::cout << "* Como obstaculo e sem retornar para casa: 71" << std::endl;
 	std::cout << "Tudo certo como deveria: 78" << std::endl;
 
-	Dados Dados("caso20.txt");
+	Dados Dados("teste.txt");
 	Dados.Mapa();
 	Dados.DFS();
 
