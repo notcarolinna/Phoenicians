@@ -4,7 +4,6 @@
 #include <vector>
 #include <stack>
 
-
 class Dados {
 private:
 	int linhas;
@@ -19,11 +18,10 @@ public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
 	void Mapa();
 	bool CaminhoValido(int porto);
-	void DFS();
+	void DFS(std::vector<int>& portosDesobstruidos);
 };
 
 void Dados::Mapa() {
-
 	std::ifstream file("./resources/" + arquivo);
 
 	if (!file.is_open()) {
@@ -44,21 +42,15 @@ void Dados::Mapa() {
 	int portoAtual = 1;
 
 	for (int i = 0; i < linhas; i++) {
-
 		std::getline(file, line);
 		std::vector<char> col(colunas, ' ');
 
 		for (int j = 0; j < colunas && j < line.size(); j++) {
-
 			col[j] = line[j];
 
-			//std::cout << "Lendo caractere " << line[j] << " na coordenada (" << i << "," << j << ")" << std::endl;
-
 			if (line[j] >= '1' && line[j] <= '9') { // Se o caractere for um número de 1 até 9
-
-				int atual = line[j] - '0';
-
-				if (atual == portoAtual) {
+				int num = line[j] - '0';
+				if (num == portoAtual) {
 					partida = { i, j };
 					portoAtual++;
 				}
@@ -67,6 +59,11 @@ void Dados::Mapa() {
 		}
 
 		grafo[i] = col;
+	}
+
+	std::cout << "\nCoordenadas dos portos:\n";
+	for (const auto& coord : coordenadas) {
+		std::cout << "(" << coord.first << "," << coord.second << ")" << std::endl;
 	}
 }
 
@@ -106,9 +103,7 @@ bool Dados::CaminhoValido(int porto) {
 	return false; // Não encontrou o porto
 }
 
-
-void Dados::DFS() {
-
+void Dados::DFS(std::vector<int>& portosDesobstruidos) {
 	std::cout << "\n" << std::endl;
 
 	int combustivel = 0;
@@ -117,35 +112,38 @@ void Dados::DFS() {
 	visitado[partida.first][partida.second] = true; // Marca o vértice inicial como visitado
 
 	std::stack<int> portos;
-	for (int i = 9; i >= 1; i--) {
-		portos.push(i);
+
+	for (int i = portosDesobstruidos.size() - 1; i >= 0; i--) {
+		portos.push(portosDesobstruidos[i]);
 	}
 
-	while (!portos.empty()) {
+	int portoAtual = 1;
 
+	while (!portos.empty()) {
 		int atual = portos.top();
 		portos.pop();
 
+		std::cout << "\nBuscando o posto " << atual << "..." << std::endl;
+
 		for (auto& v : coordenadas) {
-
-			int vizinho = grafo[v.first][v.second] - '0';
-
-			if (!visitado[v.first][v.second] && vizinho == atual) {
-
-				visitado[v.first][v.second] = true;
+			if (grafo[v.first][v.second] == atual + '0' && CaminhoValido(atual)) {
 				std::cout << "Encontrei posto " << atual << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
 
-				combustivel += abs(partida.first - v.first) + abs(partida.second - v.second);
-				partida = v; // troca o ponto de partida
+				int distancia = abs(partida.first - v.first) + abs(partida.second - v.second);
+				std::cout << "Partida: " << partida.first << "," << partida.second << std::endl;
+				std::cout << "Chegada: " << v.first << "," << v.second << std::endl;
+				std::cout << "Distancia: " << distancia << std::endl;
 
-				//caso chegue no último porto
-				if (atual == 9) {
-					std::cout << "\nCombustivel total: " << combustivel << std::endl;
+				combustivel += distancia;
+				partida = v;
+
+				if (atual == 9) { // último posto encontrado, encerrando busca
+					std::cout << "\nDistancia total percorrida: " << combustivel << std::endl;
 					return;
 				}
 
-				portos.push(vizinho);
-
+				portoAtual++;
+				break;
 			}
 		}
 	}
@@ -158,15 +156,22 @@ int main() {
 	std::cout << "* Como obstaculo e sem retornar para casa: 71" << std::endl;
 	std::cout << "Tudo certo como deveria: 78" << std::endl;
 
-	Dados Dados("teste.txt");
-	Dados.Mapa();
-	Dados.DFS();
+	Dados dados("teste.txt");
+	dados.Mapa();
 
-	for (int i = 2; i <= 9; i++) {
-		if (!Dados.CaminhoValido(i)) {
+	std::cout << "\n\n" << std::endl;
+
+	std::vector<int> portosDesobstruidos;
+	for (int i = 1; i <= 9; i++) {
+		if (!dados.CaminhoValido(i)) {
 			std::cout << "Porto " << i << " obstruido" << std::endl;
 		}
+		else {
+			portosDesobstruidos.push_back(i);
+		}
 	}
+
+	dados.DFS(portosDesobstruidos);
 
 	return 0;
 }
