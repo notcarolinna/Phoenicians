@@ -18,6 +18,7 @@ private:
 public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
 	void Mapa();
+	bool CaminhoValido(int porto);
 	void DFS();
 };
 
@@ -68,6 +69,43 @@ void Dados::Mapa() {
 		grafo[i] = col;
 	}
 }
+
+bool Dados::CaminhoValido(int porto) {
+
+	std::vector<std::vector<bool>> visitado(linhas, std::vector<bool>(colunas, false));
+	visitado[partida.first][partida.second] = true; // Marca o vértice inicial como visitado
+
+	std::stack<std::pair<int, int>> pilha;
+	pilha.push(partida);
+
+	while (!pilha.empty()) {
+		auto atual = pilha.top();
+		pilha.pop();
+
+		int i = atual.first;
+		int j = atual.second;
+
+		if (grafo[i][j] - '0' == porto) {
+			return true; // Encontrou o porto
+		}
+
+		// Verifica os vizinhos (Norte, Sul, Leste, Oeste)
+		std::vector<std::pair<int, int>> vizinhos = { {i - 1, j}, {i + 1, j}, {i, j + 1}, {i, j - 1} };
+
+		for (const auto& vizinho : vizinhos) {
+			int linha = vizinho.first;
+			int coluna = vizinho.second;
+
+			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas && !visitado[linha][coluna] && grafo[linha][coluna] != '*') {
+				visitado[linha][coluna] = true;
+				pilha.push(vizinho);
+			}
+		}
+	}
+
+	return false; // Não encontrou o porto
+}
+
 
 void Dados::DFS() {
 
@@ -123,6 +161,12 @@ int main() {
 	Dados Dados("teste.txt");
 	Dados.Mapa();
 	Dados.DFS();
+
+	for (int i = 2; i <= 9; i++) {
+		if (!Dados.CaminhoValido(i)) {
+			std::cout << "Porto " << i << " obstruido" << std::endl;
+		}
+	}
 
 	return 0;
 }
