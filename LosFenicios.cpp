@@ -126,7 +126,7 @@ void Dados::DFS(std::vector<int>& portosDesobstruidos) {
 		std::cout << "\nBuscando o posto " << atual << "..." << std::endl;
 
 		for (auto& v : coordenadas) {
-			if (grafo[v.first][v.second] == atual + '0' && CaminhoValido(atual)) {
+			if (grafo[v.first][v.second] == atual + '0') {
 				std::cout << "Encontrei posto " << atual << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
 
 				int distancia = abs(partida.first - v.first) + abs(partida.second - v.second);
@@ -137,7 +137,7 @@ void Dados::DFS(std::vector<int>& portosDesobstruidos) {
 				combustivel += distancia;
 				partida = v;
 
-				if (atual == 9) { // último posto encontrado, encerrando busca
+				if (atual == 9) { 
 					std::cout << "\nDistancia total percorrida: " << combustivel << std::endl;
 					return;
 				}
