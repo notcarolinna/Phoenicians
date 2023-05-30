@@ -18,7 +18,7 @@ public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
 	void Mapa();
 	bool CaminhoValido(int porto);
-	void DFS(std::vector<int>& portosDesobstruidos);
+	void DFS(std::vector<int>& portosNavegaveis);
 };
 
 void Dados::Mapa() {
@@ -52,8 +52,8 @@ void Dados::Mapa() {
 			if (line[j] >= '1' && line[j] <= '9') { // Verifica se o caractere é um número de 1 a 9
 
 				int num = line[j] - '0'; // Converte o caractere para um número, mas pode-se alterar essa verificação para pegar apenas números
-				if (num == portoAtual) { // Verifica se o caractere lido é igual ao porto atual
-					partida = { i, j }; // Se for, atualiza as coordenadas do porto atual
+				if (num == portoAtual) { // Verifica se o caractere lido é igual ao porto portoAtual
+					partida = { i, j }; // Se for, atualiza as coordenadas do porto portoAtual
 					portoAtual++;
 				}
 
@@ -74,8 +74,8 @@ bool Dados::CaminhoValido(int porto) {
 
 	/*
 	Essa função foi um surto depois de tentar muitas vezes fazer meu código reconhecer os asteriscos.
-	A lógica teria que ser: verificar se o vizinho é um asterisco e, se for, retorna para o ponto de 
-	partida do último porto visitado e procura o próximo caminho sem obstrução. Isso provavelmente 
+	A lógica teria que ser: verificar se o vizinho é um asterisco e, se for, retorna para o ponto de
+	partida do último porto visitado e procura o próximo caminho sem obstrução. Isso provavelmente
 	envolve recursão.
 	*/
 
@@ -86,23 +86,23 @@ bool Dados::CaminhoValido(int porto) {
 	pilha.push(partida);
 
 	while (!pilha.empty()) {
-		auto atual = pilha.top();
+		auto portoAtual = pilha.top();
 		pilha.pop();
 
-		int i = atual.first;
-		int j = atual.second;
+		int i = portoAtual.first;
+		int j = portoAtual.second;
 
-		if (grafo[i][j] - '0' == porto) { // Verifica se o valor do vértice atual é igual ao porto desejado, se for, o porto foi encontrado
+		if (grafo[i][j] - '0' == porto) { // Verifica se o valor do vértice portoAtual é igual ao porto desejado, se for, o porto foi encontrado
 			return true; // Encontrou o porto
 		}
 
 		// Verifica os vizinhos (Norte, Sul, Leste, Oeste)
 		std::vector<std::pair<int, int>> vizinhos = { {i - 1, j}, {i + 1, j}, {i, j + 1}, {i, j - 1} };
 
-		for (const auto& vizinho : vizinhos) { // Itera sobre caada vizinho na lista de vizinhos
-			
-			// Obtém as coordenadas do vizinho atual
-			int linha = vizinho.first; 
+		for (auto& vizinho : vizinhos) { // Itera sobre caada vizinho na lista de vizinhos
+
+			// Obtém as coordenadas do vizinho portoAtual
+			int linha = vizinho.first;
 			int coluna = vizinho.second;
 
 			// Verifica se as coordenadas estão dentro dos limites do grafo e se o vizinho não é um asterisco
@@ -117,7 +117,7 @@ bool Dados::CaminhoValido(int porto) {
 }
 
 
-void Dados::DFS(std::vector<int>& portosDesobstruidos) {
+void Dados::DFS(std::vector<int>& portosNavegaveis) {
 	std::cout << "\n" << std::endl;
 
 	int combustivel = 0;
@@ -128,37 +128,33 @@ void Dados::DFS(std::vector<int>& portosDesobstruidos) {
 	std::stack<int> portos;
 
 	// Coloca na pilha apenas os portos não obstruídos obtidos a partir da função CaminhoValido e da main
-	for (int i = portosDesobstruidos.size() - 1; i >= 0; i--) {
-		portos.push(portosDesobstruidos[i]);
+	for (int i = portosNavegaveis.size() - 1; i >= 0; i--) {
+		portos.push(portosNavegaveis[i]);
 	}
 
-	int portoAtual = 1;
-
 	while (!portos.empty()) {
-		int atual = portos.top();
+		int portoAtual = portos.top();
 		portos.pop();
 
-		std::cout << "\nBuscando o posto " << atual << "..." << std::endl;
+		std::cout << "\nBuscando o posto " << portoAtual << "..." << std::endl;
 
-		for (auto& v : coordenadas) { // Percorre todas as coordenadas armazenadas no vector coordenadas
-			if (grafo[v.first][v.second] == atual + '0') { // Verifica se o caractere correspondente à coordenada atual é igual ao número do porto atual
-				std::cout << "Encontrei posto " << atual << " na coordenada (" << v.first << "," << v.second << ")" << std::endl;
+		for (auto& coordenada : coordenadas) { // Percorre todas as coordenadas armazenadas no vector coordenadas
+			if (grafo[coordenada.first][coordenada.second] == portoAtual + '0') { // Verifica se o caractere correspondente à coordenada portoAtual é igual ao número do porto portoAtual
+				std::cout << "Encontrei posto " << portoAtual << " na coordenada (" << coordenada.first << "," << coordenada.second << ")" << std::endl;
 
 				// Cálculo da distância entre a partida e chegada usando a distância de Manhattan
-				int distancia = abs(partida.first - v.first) + abs(partida.second - v.second);
+				int distancia = abs(partida.first - coordenada.first) + abs(partida.second - coordenada.second);
 				std::cout << "Partida: " << partida.first << "," << partida.second << std::endl;
-				std::cout << "Chegada: " << v.first << "," << v.second << std::endl;
+				std::cout << "Chegada: " << coordenada.first << "," << coordenada.second << std::endl;
 				std::cout << "Distancia: " << distancia << std::endl;
 
 				combustivel += distancia;
-				partida = v;
+				partida = coordenada;
 
-				if (atual == 9) {
+				if (portoAtual == 9) {
 					std::cout << "\nDistancia total percorrida: " << combustivel << std::endl;
 					return;
 				}
-
-				portoAtual++;
 				break;
 			}
 		}
@@ -178,17 +174,17 @@ int main() {
 
 	std::cout << "\n\n" << std::endl;
 
-	std::vector<int> portosDesobstruidos;
+	std::vector<int> portosNavegaveis;
 	for (int i = 1; i <= 9; i++) {
 		if (!dados.CaminhoValido(i)) {
 			std::cout << "Porto " << i << " obstruido" << std::endl;
 		}
 		else {
-			portosDesobstruidos.push_back(i);
+			portosNavegaveis.push_back(i);
 		}
 	}
 
-	dados.DFS(portosDesobstruidos);
+	dados.DFS(portosNavegaveis);
 
 	return 0;
 }
