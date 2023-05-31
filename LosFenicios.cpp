@@ -3,6 +3,10 @@
 #include <sstream>
 #include <vector>
 #include <stack>
+#include <list>
+#include <algorithm>
+#include <iomanip>
+#include <chrono>
 
 class Dados {
 private:
@@ -17,11 +21,13 @@ private:
 public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
 	void Mapa();
-	bool CaminhoValido(int porto);
-	void DFS(std::vector<int>& portosNavegaveis);
+	void DFS();
+	int DistanciaAbsoluta(std::pair<int, int> origem, std::pair<int, int> destino);
+	int CalculaDistancia(std::pair<int, int> origem, std::pair<int, int> destino);
 };
 
 void Dados::Mapa() {
+
 	std::ifstream file("./resources/" + arquivo);
 
 	if (!file.is_open()) {
@@ -36,28 +42,23 @@ void Dados::Mapa() {
 
 	std::cout << "\n\nLinhas: " << linhas << "\nColunas: " << colunas << std::endl;
 
-	grafo = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas)); // Criação de uma matriz com o tamanho obtido das linhas e colunas
-	partida = { 0, 0 };
+	grafo = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
 
-	int portoAtual = 1; // Inicializei em 1 pois o percurso começa sempre do primeiro porto 
+	int portoAtual = 1;
 
-	for (int i = 0; i < linhas; i++) { // Percorre cada linha
+	for (int i = 0; i < linhas; i++) {
 		std::getline(file, line);
-		std::vector<char> col(colunas, ' '); // Criação de um vetor com o tamanho do número de colunas
+		std::vector<char> col(colunas, ' ');
 
-		for (int j = 0; j < colunas && j < line.size(); j++) { // Percorre cada coluna da linha
-
+		for (int j = 0; j < colunas && j < line.size(); j++) {
 			col[j] = line[j];
 
-			if (line[j] >= '1' && line[j] <= '9') { // Verifica se o caractere é um número de 1 a 9
-
-				int num = line[j] - '0'; // Converte o caractere para um número, mas pode-se alterar essa verificação para pegar apenas números
-				if (num == portoAtual) { // Verifica se o caractere lido é igual ao porto portoAtual
-					partida = { i, j }; // Se for, atualiza as coordenadas do porto portoAtual
-					portoAtual++;
+			if (line[j] >= '1' && line[j] <= '9') { // Se o caractere for um número de 1 até 9
+				int num = line[j] - '0';
+				if (num == portoAtual) {
+					partida = { i, j };
 				}
-
-				coordenadas.emplace_back(i, j); // Adiciona a linha lida na matriz
+				coordenadas.emplace_back(i, j);
 			}
 		}
 
@@ -68,123 +69,121 @@ void Dados::Mapa() {
 	for (const auto& coord : coordenadas) {
 		std::cout << "(" << coord.first << "," << coord.second << ")" << std::endl;
 	}
+
+	std::cout << "\nPartida:\n";
+	std::cout << "(" << partida.first << "," << partida.second << ")" << std::endl;
 }
 
-bool Dados::CaminhoValido(int porto) {
+int Dados::DistanciaAbsoluta(std::pair<int, int> origem, std::pair<int, int> destino) {
+	return abs(origem.first - destino.first) + abs(origem.second - destino.second);
+}
 
-	/*
-	Essa função foi um surto depois de tentar muitas vezes fazer meu código reconhecer os asteriscos.
-	A lógica teria que ser: verificar se o vizinho é um asterisco e, se for, retorna para o ponto de
-	partida do último porto visitado e procura o próximo caminho sem obstrução. Isso provavelmente
-	envolve recursão.
-	*/
+int Dados::CalculaDistancia(std::pair<int, int> origem, std::pair<int, int> destino) {
+	std::vector<std::vector<bool>> mapa_visitado(linhas, std::vector<bool>(colunas, false));
+	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // valor máximo
+	int combustivel_gasto = 0;
 
-	std::vector<std::vector<bool>> visitado(linhas, std::vector<bool>(colunas, false));
-	visitado[partida.first][partida.second] = true; // Marca o vértice inicial como visitado
+	mapa_visitado[origem.first][origem.second] = true; // Marca o vértice inicial como visitado
+	mapa_combustivel[origem.first][origem.second] = combustivel_gasto;
 
-	std::stack<std::pair<int, int>> pilha;
-	pilha.push(partida);
+	std::list<std::pair<int, int>> procurando;
+	procurando.push_back(origem);
 
-	while (!pilha.empty()) {
-		auto portoAtual = pilha.top();
-		pilha.pop();
+	while (!procurando.empty()) {
+		std::pair<int, int> atual = { -1, -1 };
+		int combustivel_estimado = linhas * colunas; // valor máximo
 
-		int i = portoAtual.first;
-		int j = portoAtual.second;
+		for (const auto& posicao : procurando) { // pega a coordenada com menor combustivel estimado
+			if (DistanciaAbsoluta(posicao, destino) + mapa_combustivel[posicao.first][posicao.second] < combustivel_estimado) {
+				combustivel_estimado = DistanciaAbsoluta(posicao, destino) + mapa_combustivel[posicao.first][posicao.second];
+				atual = posicao;
+			}
+		}
+		procurando.remove(atual);
 
-		if (grafo[i][j] - '0' == porto) { // Verifica se o valor do vértice portoAtual é igual ao porto desejado, se for, o porto foi encontrado
-			return true; // Encontrou o porto
+		int i = atual.first;
+		int j = atual.second;
+		mapa_visitado[i][j] = true; // ja foi checado
+
+		if (i == destino.first && j == destino.second) {
+			return mapa_combustivel[i][j];
 		}
 
-		// Verifica os vizinhos (Norte, Sul, Leste, Oeste)
+		combustivel_gasto = mapa_combustivel[i][j] + 1;
+
 		std::vector<std::pair<int, int>> vizinhos = { {i - 1, j}, {i + 1, j}, {i, j + 1}, {i, j - 1} };
 
-		for (auto& vizinho : vizinhos) { // Itera sobre caada vizinho na lista de vizinhos
-
-			// Obtém as coordenadas do vizinho portoAtual
+		for (const auto& vizinho : vizinhos) {
 			int linha = vizinho.first;
 			int coluna = vizinho.second;
 
-			// Verifica se as coordenadas estão dentro dos limites do grafo e se o vizinho não é um asterisco
-			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas && !visitado[linha][coluna] && grafo[linha][coluna] != '*') {
-				visitado[linha][coluna] = true;
-				pilha.push(vizinho);
+
+			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas &&
+				!mapa_visitado[linha][coluna] && grafo[linha][coluna] != '*') {
+				if (combustivel_gasto < mapa_combustivel[linha][coluna] ||
+					(std::find(procurando.begin(), procurando.end(), std::make_pair(linha, coluna)) == procurando.end())) {
+					mapa_combustivel[linha][coluna] = combustivel_gasto;
+					if (std::find(procurando.begin(), procurando.end(), std::make_pair(linha, coluna)) == procurando.end()) {
+						procurando.push_back({ linha, coluna });
+					}
+				}
 			}
 		}
 	}
-
-	return false; // Não encontrou o porto
+	return -1;
 }
 
-
-void Dados::DFS(std::vector<int>& portosNavegaveis) {
-	std::cout << "\n" << std::endl;
-
+void Dados::DFS() {
 	int combustivel = 0;
 
-	std::vector<std::vector<bool>> visitado(linhas, std::vector<bool>(colunas, false));
-	visitado[partida.first][partida.second] = true; // Marca o vértice inicial como visitado
-
 	std::stack<int> portos;
-
-	// Coloca na pilha apenas os portos não obstruídos obtidos a partir da função CaminhoValido e da main
-	for (int i = portosNavegaveis.size() - 1; i >= 0; i--) {
-		portos.push(portosNavegaveis[i]);
+	portos.push(1);
+	for (int i = 9; i >= 2; i--) {
+		portos.push(i);
 	}
 
 	while (!portos.empty()) {
-		int portoAtual = portos.top();
+		int atual = portos.top();
 		portos.pop();
 
-		std::cout << "\nBuscando o posto " << portoAtual << "..." << std::endl;
+		for (auto& destino : coordenadas) {
+			if (grafo[destino.first][destino.second] == atual + '0') {
+				std::cout << "Posto " << atual << " na coordenada (" << destino.first << "," << destino.second << ")" << std::endl;
+				//std::cout << "Partida: " << partida.first << "," << partida.second << std::endl;
+				//std::cout << "Chegada: " << destino.first << "," << destino.second << std::endl;
 
-		for (auto& coordenada : coordenadas) { // Percorre todas as coordenadas armazenadas no vector coordenadas
-			if (grafo[coordenada.first][coordenada.second] == portoAtual + '0') { // Verifica se o caractere correspondente à coordenada portoAtual é igual ao número do porto portoAtual
-				std::cout << "Encontrei posto " << portoAtual << " na coordenada (" << coordenada.first << "," << coordenada.second << ")" << std::endl;
+				int distancia = CalculaDistancia(partida, destino);
 
-				// Cálculo da distância entre a partida e chegada usando a distância de Manhattan
-				int distancia = abs(partida.first - coordenada.first) + abs(partida.second - coordenada.second);
-				std::cout << "Partida: " << partida.first << "," << partida.second << std::endl;
-				std::cout << "Chegada: " << coordenada.first << "," << coordenada.second << std::endl;
-				std::cout << "Distancia: " << distancia << std::endl;
-
-				combustivel += distancia;
-				partida = coordenada;
-
-				if (portoAtual == 9) {
-					std::cout << "\nDistancia total percorrida: " << combustivel << std::endl;
-					return;
+				if (distancia == -1) {
+					std::cout << "Porto obstruido" << std::endl;
+				}
+				else {
+					std::cout << "Distancia: " << distancia << std::endl;
+					combustivel += distancia;
+					partida = destino;
 				}
 				break;
 			}
 		}
 	}
+	std::cout << "\nDistancia total percorrida: " << combustivel << std::endl;
 }
 
 int main() {
 
-	std::cout << "\n\nTabela de resultados para o teste: " << std::endl;
-	std::cout << "Sem contar * como obstaculo e sem retornar para casa: 61" << std::endl;
-	std::cout << "Contando portos obstruídos mas sem contar o  * no caminhamento: 57" << std::endl;
-	std::cout << "* Como obstaculo e sem retornar para casa: 71" << std::endl;
-	std::cout << "Tudo certo como deveria: 78" << std::endl;
+	auto start = std::chrono::high_resolution_clock::now();
 
-	Dados dados("teste.txt");
+	Dados dados("caso04.txt");
 	dados.Mapa();
 
 	std::cout << "\n\n" << std::endl;
 
-	std::vector<int> portosNavegaveis;
-	for (int i = 1; i <= 9; i++) {
-		if (!dados.CaminhoValido(i)) {
-			std::cout << "Porto " << i << " obstruido" << std::endl;
-		}
-		else {
-			portosNavegaveis.push_back(i);
-		}
-	}
+	dados.DFS();
 
-	dados.DFS(portosNavegaveis);
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+
+	std::cout << std::fixed << std::setprecision(1) << duration.count() << " segundos." << std::endl;
 
 	return 0;
 }
