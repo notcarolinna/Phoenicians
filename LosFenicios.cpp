@@ -5,6 +5,8 @@
 #include <stack>
 #include <list>
 #include <algorithm>
+#include <unordered_map>
+#include <queue>
 #include <iomanip>
 #include <chrono>
 
@@ -15,19 +17,18 @@ private:
 	std::string arquivo;
 
 	std::vector<std::vector<char>> grafo; // Armazena o grafo
-	std::vector<std::pair<int, int>> coordenadas; // Armazena as coordenadas dos portos
+	std::unordered_map<int, std::pair<int, int>> mapa_coordenadas; // Mapa de coordenadas
 	std::pair<int, int> partida; // Coordenadas de partida
 
 public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
 	void Mapa();
 	void DFS();
-	int DistanciaAbsoluta(std::pair<int, int> origem, std::pair<int, int> destino);
-	int CalculaDistancia(std::pair<int, int> origem, std::pair<int, int> destino);
+	int DistanciaAbsoluta(const std::pair<int, int>& origem, const std::pair<int, int>& destino);
+	int CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino);
 };
 
 void Dados::Mapa() {
-
 	std::ifstream file("./resources/" + arquivo);
 
 	if (!file.is_open()) {
@@ -58,27 +59,18 @@ void Dados::Mapa() {
 				if (num == portoAtual) {
 					partida = { i, j };
 				}
-				coordenadas.emplace_back(i, j);
+				mapa_coordenadas.emplace(num, std::make_pair(i, j));
 			}
 		}
-
 		grafo[i] = col;
 	}
-
-	std::cout << "\nCoordenadas dos portos:\n";
-	for (const auto& coord : coordenadas) {
-		std::cout << "(" << coord.first << "," << coord.second << ")" << std::endl;
-	}
-
-	std::cout << "\nPartida:\n";
-	std::cout << "(" << partida.first << "," << partida.second << ")" << std::endl;
 }
 
-int Dados::DistanciaAbsoluta(std::pair<int, int> origem, std::pair<int, int> destino) {
+int Dados::DistanciaAbsoluta(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
 	return abs(origem.first - destino.first) + abs(origem.second - destino.second);
 }
 
-int Dados::CalculaDistancia(std::pair<int, int> origem, std::pair<int, int> destino) {
+int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
 	std::vector<std::vector<bool>> mapa_visitado(linhas, std::vector<bool>(colunas, false));
 	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // valor máximo
 	int combustivel_gasto = 0;
@@ -86,20 +78,12 @@ int Dados::CalculaDistancia(std::pair<int, int> origem, std::pair<int, int> dest
 	mapa_visitado[origem.first][origem.second] = true; // Marca o vértice inicial como visitado
 	mapa_combustivel[origem.first][origem.second] = combustivel_gasto;
 
-	std::list<std::pair<int, int>> procurando;
-	procurando.push_back(origem);
+	std::priority_queue<std::pair<int, std::pair<int, int>>> procurando;
+	procurando.emplace(std::make_pair(0, origem));
 
 	while (!procurando.empty()) {
-		std::pair<int, int> atual = { -1, -1 };
-		int combustivel_estimado = linhas * colunas; // valor máximo
-
-		for (const auto& posicao : procurando) { // pega a coordenada com menor combustivel estimado
-			if (DistanciaAbsoluta(posicao, destino) + mapa_combustivel[posicao.first][posicao.second] < combustivel_estimado) {
-				combustivel_estimado = DistanciaAbsoluta(posicao, destino) + mapa_combustivel[posicao.first][posicao.second];
-				atual = posicao;
-			}
-		}
-		procurando.remove(atual);
+		std::pair<int, int> atual = procurando.top().second;
+		procurando.pop();
 
 		int i = atual.first;
 		int j = atual.second;
@@ -120,12 +104,9 @@ int Dados::CalculaDistancia(std::pair<int, int> origem, std::pair<int, int> dest
 
 			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas &&
 				!mapa_visitado[linha][coluna] && grafo[linha][coluna] != '*') {
-				if (combustivel_gasto < mapa_combustivel[linha][coluna] ||
-					(std::find(procurando.begin(), procurando.end(), std::make_pair(linha, coluna)) == procurando.end())) {
+				if (combustivel_gasto < mapa_combustivel[linha][coluna]) {
 					mapa_combustivel[linha][coluna] = combustivel_gasto;
-					if (std::find(procurando.begin(), procurando.end(), std::make_pair(linha, coluna)) == procurando.end()) {
-						procurando.push_back({ linha, coluna });
-					}
+					procurando.emplace(std::make_pair(-(DistanciaAbsoluta(vizinho, destino) + mapa_combustivel[vizinho.first][vizinho.second]), vizinho));
 				}
 			}
 		}
@@ -146,24 +127,17 @@ void Dados::DFS() {
 		int atual = portos.top();
 		portos.pop();
 
-		for (auto& destino : coordenadas) {
-			if (grafo[destino.first][destino.second] == atual + '0') {
-				std::cout << "Posto " << atual << " na coordenada (" << destino.first << "," << destino.second << ")" << std::endl;
-				//std::cout << "Partida: " << partida.first << "," << partida.second << std::endl;
-				//std::cout << "Chegada: " << destino.first << "," << destino.second << std::endl;
+		std::pair<int, int> destino = mapa_coordenadas[atual];
+		std::cout << "Posto " << atual << " na coordenada (" << destino.first << "," << destino.second << ")" << std::endl;
+		int distancia = CalculaDistancia(partida, destino);
 
-				int distancia = CalculaDistancia(partida, destino);
-
-				if (distancia == -1) {
-					std::cout << "Porto obstruido" << std::endl;
-				}
-				else {
-					std::cout << "Distancia: " << distancia << std::endl;
-					combustivel += distancia;
-					partida = destino;
-				}
-				break;
-			}
+		if (distancia == -1) {
+			std::cout << "Porto obstruido" << std::endl;
+		}
+		else {
+			std::cout << "Distancia: " << distancia << std::endl;
+			combustivel += distancia;
+			partida = destino;
 		}
 	}
 	std::cout << "\nDistancia total percorrida: " << combustivel << std::endl;
@@ -173,7 +147,9 @@ int main() {
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	Dados dados("caso04.txt");
+	std::cout << "Caso 08" << std::endl;
+	Dados dados("caso08.txt");
+
 	dados.Mapa();
 
 	std::cout << "\n\n" << std::endl;
