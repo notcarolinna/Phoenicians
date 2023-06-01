@@ -70,9 +70,12 @@ int Dados::DistanciaAbsoluta(const std::pair<int, int>& origem, const std::pair<
 }
 
 int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
+	
 	std::vector<std::vector<bool>> mapa_visitado(linhas, std::vector<bool>(colunas, false));
 	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // valor máximo
+	
 	int combustivel_gasto = 0;
+	
 	mapa_combustivel[origem.first][origem.second] = combustivel_gasto;
 	int combustivel_estimado = combustivel_gasto + DistanciaAbsoluta(origem, destino);
 
@@ -101,11 +104,13 @@ int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<i
 		std::vector<std::pair<int, int>> vizinhos = { {i - 1, j}, {i + 1, j}, {i, j + 1}, {i, j - 1} };
 
 		for (const auto& vizinho : vizinhos) {
+			
 			int linha = vizinho.first;
 			int coluna = vizinho.second;
 
 			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas &&
 				!mapa_visitado[linha][coluna] && grafo[linha][coluna] != '*') {
+				
 				if (combustivel_gasto < mapa_combustivel[linha][coluna]) { // verifica se esse caminho é melhor que o anterior
 					mapa_combustivel[linha][coluna] = combustivel_gasto;
 					combustivel_estimado = combustivel_gasto + DistanciaAbsoluta(vizinho, destino);
@@ -123,8 +128,11 @@ void Dados::A_STAR() {
 	int porto_partida = 1;
 
 	for (int i = 0; i < MAX_PORTOS; i++) {
+		
 		int porto_chegada = ((i + 1) % MAX_PORTOS) + 1; // 2 3 4 5 6 7 8 9 1
+		
 		std::cout << "Porto " << porto_partida << " para porto " << porto_chegada << std::endl;
+		
 		int distancia = CalculaDistancia(mapa_coordenadas[porto_partida], mapa_coordenadas[porto_chegada]);
 
 		if (distancia == -1) {
