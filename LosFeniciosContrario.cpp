@@ -68,7 +68,9 @@ int Dados::DistanciaAbsoluta(const std::pair<int, int>& origem, const std::pair<
 int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
 	std::vector<std::vector<bool>> mapa_visitado(linhas, std::vector<bool>(colunas, false));
 	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // valor máximo
+	
 	int combustivel_gasto = 0;
+	
 	mapa_combustivel[origem.first][origem.second] = combustivel_gasto;
 	int combustivel_estimado = combustivel_gasto + DistanciaAbsoluta(origem, destino);
 
