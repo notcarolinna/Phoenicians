@@ -16,7 +16,7 @@ private:
 	int colunas;
 	std::string arquivo;
 
-	std::vector<std::vector<char>> grafo; // Armazena o grafo
+	std::vector<std::vector<char>> mapa; // Armazena o mapa
 	std::unordered_map<int, std::pair<int, int>> mapa_coordenadas; // Mapa de coordenadas
 	std::pair<int, int> partida; // Coordenadas de partida
 
@@ -43,7 +43,7 @@ void Dados::Mapa() {
 
 	std::cout << "\n\nLinhas: " << linhas << "\nColunas: " << colunas << std::endl;
 
-	grafo = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
+	mapa = std::vector<std::vector<char>>(linhas, std::vector<char>(colunas));
 
 	int portoAtual = 1;
 
@@ -62,7 +62,7 @@ void Dados::Mapa() {
 				mapa_coordenadas.emplace(num, std::make_pair(i, j));
 			}
 		}
-		grafo[i] = col;
+		mapa[i] = col;
 	}
 }
 
@@ -106,7 +106,7 @@ int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<i
 			int coluna = vizinho.second;
 
 			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas &&
-				!mapa_visitado[linha][coluna] && grafo[linha][coluna] != '*') {
+				!mapa_visitado[linha][coluna] && mapa[linha][coluna] != '*') {
 				if (combustivel_gasto < mapa_combustivel[linha][coluna]) {
 					mapa_combustivel[linha][coluna] = combustivel_gasto;
 					procurando.emplace(std::make_pair(-(DistanciaAbsoluta(vizinho, destino) + mapa_combustivel[vizinho.first][vizinho.second]), vizinho));
@@ -135,10 +135,10 @@ void Dados::A_STAR() {
 		int distancia = CalculaDistancia(partida, destino);
 
 		if (distancia == -1) {
-			std::cout << "Porto obstruído" << std::endl;
+			std::cout << "Porto obstruido" << std::endl;
 		}
 		else {
-			std::cout << "Distância: " << distancia << std::endl;
+			std::cout << "Distancia: " << distancia << std::endl;
 			combustivel += distancia;
 			partida = destino;
 		}
