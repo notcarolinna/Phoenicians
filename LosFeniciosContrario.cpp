@@ -68,12 +68,12 @@ int Dados::Manhattan(const std::pair<int, int>& origem, const std::pair<int, int
 int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
 
 	std::vector<std::vector<bool>> visitados(linhas, std::vector<bool>(colunas, false)); // Rastreia os portos que já foram visitados durante a busca
-	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // Armazena o custo acumulado de combustível até cada porto durante a busca
+	std::vector<std::vector<int>> menorCaminho(linhas, std::vector<int>(colunas, linhas * colunas)); // Armazena o custo acumulado de combustível até cada porto durante a busca
 
 	int combustivel_gasto = 0;
 
-	// Quando é encontrado um caminho com um custo menor que o previamente armazenado no mapa_combustivel, o valor é atualizado
-	mapa_combustivel[origem.first][origem.second] = combustivel_gasto;
+	// Quando é encontrado um caminho com um custo menor que o previamente armazenado no menorCaminho, o valor é atualizado
+	menorCaminho[origem.first][origem.second] = combustivel_gasto;
 
 	// Soma o custo acumulado até o porto atual com a distância de Manhattan entre os pontos de partida e chegada
 	// O combustivel_estimado é uma heurística utilizada no A* para estimar o custo restante até o destino
@@ -98,10 +98,10 @@ int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<i
 		visitados[i][j] = true; // Marca como visitado
 
 		if (i == destino.first && j == destino.second) { // Se o porto atual é o destino...
-			return mapa_combustivel[i][j]; // O custo acumulado de combustível até o porto atual é retornado
+			return menorCaminho[i][j]; // O custo acumulado de combustível até o porto atual é retornado
 		}
 
-		combustivel_gasto = mapa_combustivel[i][j] + 1; // incrementa combustivel
+		combustivel_gasto = menorCaminho[i][j] + 1; // incrementa combustivel
 
 		// Contém os movimentos N, S, L, O para analizar os vizinhos
 		std::vector<std::pair<int, int>> vizinhos = { {i - 1, j}, {i + 1, j}, {i, j + 1}, {i, j - 1} };
@@ -115,9 +115,9 @@ int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<i
 			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas && // Verifica se o vizinho está dentro dos limites do grafo e se não foi visitado anteriormente
 				!visitados[linha][coluna] && grafo[linha][coluna] != '*') { // Verifica se o vizinho não é um *
 
-				if (combustivel_gasto < mapa_combustivel[linha][coluna]) { // Verifica se esse caminho é melhor que o anterior
+				if (combustivel_gasto < menorCaminho[linha][coluna]) { // Verifica se esse caminho é melhor que o anterior
 
-					mapa_combustivel[linha][coluna] = combustivel_gasto; // Atualiza o custo na matriz de combustível 
+					menorCaminho[linha][coluna] = combustivel_gasto; // Atualiza o custo na matriz de combustível 
 					combustivel_estimado = combustivel_gasto + Manhattan(vizinho, destino); // Calcula o custo estimado
 					procurando.emplace(std::make_pair(-combustivel_estimado, vizinho)); // Insere o par para ser explorado posteriormente
 
@@ -137,14 +137,14 @@ void Dados::A_STAR() {
 	for (int i = 0; i < MAX_PORTOS; i++) {
 
 		int porto_chegada = ((i + 1) % MAX_PORTOS) + 1; // 2 3 4 5 6 7 8 9 1
-		std::cout << "Porto " << porto_partida << " para porto " << porto_chegada << std::endl;
+		std::cout << "\nPorto " << porto_partida << " para porto " << porto_chegada << std::endl;
 
 		// começar pelo ponto de chegada para achar mais rapido portos obstruidos
 
 		int distancia = CalculaDistancia(mapa_coordenadas[porto_chegada], mapa_coordenadas[porto_partida]);
 
 		if (distancia == -1) {
-			std::cout << "Porto obstruido" << std::endl;
+			std::cout << " *** Porto de destino obstruido ***\n" << std::endl;
 		}
 		else {
 			std::cout << "Distancia: " << distancia << std::endl;
@@ -159,7 +159,6 @@ int main() {
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	std::cout << "Caso 20" << std::endl;
 	Dados dados("caso20.txt");
 
 	if (dados.Mapa()) {
