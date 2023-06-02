@@ -25,7 +25,7 @@ public:
 	Dados(std::string arquivo) : arquivo(arquivo) {}
 	bool Mapa();
 	void A_STAR();
-	int DistanciaAbsoluta(const std::pair<int, int>& origem, const std::pair<int, int>& destino);
+	int Manhattan(const std::pair<int, int>& origem, const std::pair<int, int>& destino);
 	int CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino);
 };
 
@@ -61,69 +61,86 @@ bool Dados::Mapa() {
 	return true;
 }
 
-int Dados::DistanciaAbsoluta(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
+int Dados::Manhattan(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
 	return abs(origem.first - destino.first) + abs(origem.second - destino.second);
 }
 
 int Dados::CalculaDistancia(const std::pair<int, int>& origem, const std::pair<int, int>& destino) {
-	std::vector<std::vector<bool>> mapa_visitado(linhas, std::vector<bool>(colunas, false));
-	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // valor máximo
-	
+
+	std::vector<std::vector<bool>> visitados(linhas, std::vector<bool>(colunas, false)); // Rastreia os portos que já foram visitados durante a busca
+	std::vector<std::vector<int>> mapa_combustivel(linhas, std::vector<int>(colunas, linhas * colunas)); // Armazena o custo acumulado de combustível até cada porto durante a busca
+
 	int combustivel_gasto = 0;
-	
+
+	// Quando é encontrado um caminho com um custo menor que o previamente armazenado no mapa_combustivel, o valor é atualizado
 	mapa_combustivel[origem.first][origem.second] = combustivel_gasto;
-	int combustivel_estimado = combustivel_gasto + DistanciaAbsoluta(origem, destino);
 
-	std::priority_queue<std::pair<int, std::pair<int, int>>> procurando;
-	procurando.emplace(std::make_pair(-combustivel_estimado, origem));
+	// Soma o custo acumulado até o porto atual com a distância de Manhattan entre os pontos de partida e chegada
+	// O combustivel_estimado é uma heurística utilizada no A* para estimar o custo restante até o destino
+	int combustivel_estimado = combustivel_gasto + Manhattan(origem, destino);
 
-	while (!procurando.empty()) {
+	std::priority_queue<std::pair<int, std::pair<int, int>>> procurando; // É o equivalente ao "caderninho", contendo os portos a serem explorados
+	procurando.emplace(std::make_pair(-combustivel_estimado, origem)); // Parâmetro negativo para obter uma fila em ordem crescente
+
+	while (!procurando.empty()) { // Enquanto a fila de busca não estiver vazia
+
+
 		std::pair<int, int> atual = procurando.top().second;
 		procurando.pop();
 
 		int i = atual.first;
 		int j = atual.second;
 
-		if (mapa_visitado[i][j] == true) { // ja foi checado
+		if (visitados[i][j] == true) { // Se o porto atual já foi visitado, continua
 			continue;
 		}
 
-		mapa_visitado[i][j] = true; // checado
+		visitados[i][j] = true; // Marca como visitado
 
-		if (i == destino.first && j == destino.second) {
-			return mapa_combustivel[i][j];
+		if (i == destino.first && j == destino.second) { // Se o porto atual é o destino...
+			return mapa_combustivel[i][j]; // O custo acumulado de combustível até o porto atual é retornado
 		}
 
 		combustivel_gasto = mapa_combustivel[i][j] + 1; // incrementa combustivel
 
+		// Contém os movimentos N, S, L, O para analizar os vizinhos
 		std::vector<std::pair<int, int>> vizinhos = { {i - 1, j}, {i + 1, j}, {i, j + 1}, {i, j - 1} };
 
-		for (const auto& vizinho : vizinhos) {
+		for (auto& vizinho : vizinhos) { // Percorre pelos vizinhos
+
 			int linha = vizinho.first;
 			int coluna = vizinho.second;
 
-			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas &&
-				!mapa_visitado[linha][coluna] && grafo[linha][coluna] != '*') {
-				if (combustivel_gasto < mapa_combustivel[linha][coluna]) { // verifica se esse caminho é melhor que o anterior
-					mapa_combustivel[linha][coluna] = combustivel_gasto;
-					combustivel_estimado = combustivel_gasto + DistanciaAbsoluta(vizinho, destino);
-					procurando.emplace(std::make_pair(-combustivel_estimado, vizinho));
+
+			if (linha >= 0 && linha < linhas && coluna >= 0 && coluna < colunas && // Verifica se o vizinho está dentro dos limites do grafo e se não foi visitado anteriormente
+				!visitados[linha][coluna] && grafo[linha][coluna] != '*') { // Verifica se o vizinho não é um *
+
+				if (combustivel_gasto < mapa_combustivel[linha][coluna]) { // Verifica se esse caminho é melhor que o anterior
+
+					mapa_combustivel[linha][coluna] = combustivel_gasto; // Atualiza o custo na matriz de combustível 
+					combustivel_estimado = combustivel_gasto + Manhattan(vizinho, destino); // Calcula o custo estimado
+					procurando.emplace(std::make_pair(-combustivel_estimado, vizinho)); // Insere o par para ser explorado posteriormente
+
 				}
 			}
 		}
 	}
-	return -1;
+	return -1; // Retorna -1 caso o destino não seja alcançável
 }
 
 void Dados::A_STAR() {
+
 	int combustivel = 0;
 
 	int porto_partida = 1;
 
 	for (int i = 0; i < MAX_PORTOS; i++) {
+
 		int porto_chegada = ((i + 1) % MAX_PORTOS) + 1; // 2 3 4 5 6 7 8 9 1
 		std::cout << "Porto " << porto_partida << " para porto " << porto_chegada << std::endl;
+
 		// começar pelo ponto de chegada para achar mais rapido portos obstruidos
+
 		int distancia = CalculaDistancia(mapa_coordenadas[porto_chegada], mapa_coordenadas[porto_partida]);
 
 		if (distancia == -1) {
